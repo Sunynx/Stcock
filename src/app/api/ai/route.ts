@@ -123,7 +123,7 @@ ${headlines || 'ไม่มีข่าว'}`;
       const status = res ? res.status : 500;
       const errorText = res ? await res.text() : 'No response from API';
       if (status === 429) {
-        return NextResponse.json({ success: false, error: 'ระบบ AI มีผู้ใช้งานเยอะเกินไป (Error 429 Rate Limit) กรุณารอสักครู่แล้วกดวิเคราะห์ใหม่ครับ ⏳' }, { status: 429 });
+        return NextResponse.json({ success: false, error: 'ระบบ AI ของค่ายนี้ติด Limit การใช้งานชั่วคราว (Error 429) ⏳ แนะนำให้เปลี่ยนไปเลือกใช้ "Groq" หรือ "OpenRouter" ในกล่องตัวเลือกด้านบนแทนครับ ✨' }, { status: 429 });
       }
       return NextResponse.json({ success: false, error: `AI Error: ${status} - ${errorText}` }, { status: 502 });
     }
