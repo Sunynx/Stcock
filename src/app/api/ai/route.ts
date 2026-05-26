@@ -54,7 +54,10 @@ ${headlines || 'ไม่มีข่าว'}`;
 
     if (!res.ok) {
       const errorText = await res.text();
-      return NextResponse.json({ success: false, error: `AI Error: ${res.status}` }, { status: 502 });
+      if (res.status === 429) {
+        return NextResponse.json({ success: false, error: 'ระบบ AI มีผู้ใช้งานเยอะเกินไป (Error 429 Rate Limit) กรุณารอสักครู่แล้วกดวิเคราะห์ใหม่ครับ ⏳' }, { status: 429 });
+      }
+      return NextResponse.json({ success: false, error: `AI Error: ${res.status} - ${errorText}` }, { status: 502 });
     }
 
     const stream = new ReadableStream({
