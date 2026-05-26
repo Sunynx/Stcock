@@ -3,6 +3,7 @@
 type Tab = { id: string; icon: string; label: string };
 
 const tabs: Tab[] = [
+  { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
   { id: 'expert_picks', icon: '🏆', label: 'Expert Picks' },
   { id: 'day_gainers', icon: '🔥', label: 'Top Gainers' },
   { id: 'us_momentum', icon: '⚡', label: 'Momentum US' },

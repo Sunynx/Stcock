@@ -15,7 +15,8 @@ import { PortfolioSummary } from '@/components/PortfolioSummary';
 import { CompareDrawer } from '@/components/CompareDrawer';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('us_momentum');
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [indexData, setIndexData] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +53,12 @@ export default function Home() {
   };
 
   const fetchFeed = useCallback(async (tab: string, silent = false) => {
+    if (tab === 'dashboard') {
+      setData(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     if (!silent) {
       setLoading(true);
       setError(null);
@@ -81,6 +88,50 @@ export default function Home() {
     setLoading(false);
   }, []);
 
+  // Fetch Dashboard Index Data
+  useEffect(() => {
+    if (activeTab === 'dashboard') {
+      const symbols = ['SPY', 'QQQ', 'DIA', 'BTC-USD', 'GC=F'];
+      const names: Record<string, string> = { 
+        'SPY': 'S&P 500', 
+        'QQQ': 'NASDAQ', 
+        'DIA': 'DOW Jones', 
+        'BTC-USD': 'Bitcoin', 
+        'GC=F': 'Gold Price' 
+      };
+      
+      const fetchIndices = async () => {
+        try {
+          const results = await Promise.all(
+            symbols.map(async (sym) => {
+              try {
+                const res = await fetch(`/api/stock?symbol=${sym}`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                  return {
+                    symbol: sym,
+                    name: names[sym] || sym,
+                    price: data.data.price,
+                    change: data.data.change,
+                    changePct: data.data.d1,
+                    isUp: (data.data.d1 ?? 0) >= 0
+                  };
+                }
+                return null;
+              } catch {
+                return null;
+              }
+            })
+          );
+          setIndexData(results.filter(Boolean));
+        } catch (e) {
+          console.error('Error fetching dashboard indices:', e);
+        }
+      };
+      fetchIndices();
+    }
+  }, [activeTab]);
+
   // Initial load & Tab change
   useEffect(() => {
     fetchFeed(activeTab);
@@ -89,7 +140,7 @@ export default function Home() {
   // 3-minute Silent Refresh
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!selectedStock) { // don't refresh if drawer is open to save resources
+      if (!selectedStock && activeTab !== 'dashboard') { // don't refresh if drawer is open or if on dashboard
         fetchFeed(activeTab, true);
       }
     }, 180000);
@@ -252,36 +303,155 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Portfolio Summary for Watchlist */}
-        {activeTab === 'watchlist' && data?.stocks && data.stocks.length > 0 && (
-          <PortfolioSummary stocks={data.stocks} />
-        )}
-
-        {/* LAYOUT: Dynamic Grid Feed */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
-          {loading && !data ? (
-            [1,2,3,4,5,6].map(i => (
-              <SkeletonCard key={i} />
-            ))
-          ) : data?.stocks.length === 0 ? (
-            <div className="col-span-full text-center py-32 text-muted">
-              <div className="text-5xl mb-6 opacity-50">🧭</div>
-              <h3 className="text-2xl font-bold text-white mb-2">No signals found</h3>
-              <p>Try switching categories or searching for a specific stock.</p>
+        {activeTab === 'dashboard' ? (
+          <div className="space-y-8 fade-in-up">
+            {/* 1. Welcome banner */}
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-accent/25 via-accent2/10 to-transparent p-6 md:p-10 border border-border/50 backdrop-blur-md shadow-2xl">
+              <div className="absolute right-0 top-0 -translate-y-12 translate-x-12 w-64 h-64 bg-accent/20 rounded-full blur-[100px]"></div>
+              <div className="relative z-10 max-w-2xl">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-accent/20 text-accent border border-accent/30 mb-4 uppercase tracking-wider">
+                  🤖 Powered by Gemini AI & Yahoo Finance
+                </span>
+                <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white mb-3 leading-tight">
+                  StockSense <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent2 to-blue">Pro Dashboard</span>
+                </h1>
+                <p className="text-sm md:text-base text-muted mb-6 leading-relaxed">
+                  ระบบวิเคราะห์ คัดกรอง และประเมินความเสี่ยงหุ้นอัตโนมัติด้วย AI 
+                  ช่วยให้คุณตัดสินใจลงทุนอย่างมีกลยุทธ์ผ่านการวิเคราะห์เทคนิคัล ปัจจัยพื้นฐาน และทิศทางข่าวสารพร้อมกันในปุ่มเดียว
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button 
+                    onClick={() => { document.getElementById('search-input')?.focus(); }}
+                    className="px-5 py-2.5 bg-white text-black font-extrabold text-xs md:text-sm rounded-full hover:bg-white/90 active:scale-95 transition-all shadow-xl shadow-white/5"
+                  >
+                    🔍 ค้นหาหุ้นด่วน
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('watchlist')}
+                    className="px-5 py-2.5 bg-card/80 text-white border border-border/60 font-extrabold text-xs md:text-sm rounded-full hover:bg-white/10 active:scale-95 transition-all"
+                  >
+                    ⭐ รายการเฝ้าดู ({watchlist.length})
+                  </button>
+                </div>
+              </div>
             </div>
-          ) : (
-            data?.stocks.map((stock: any, i: number) => (
-              <StockCard 
-                key={stock.symbol} 
-                stock={stock} 
-                rank={i + 1}
-                isWatchlisted={watchlist.includes(stock.symbol)}
-                onToggleWatchlist={toggleWatchlist}
-                onClick={setSelectedStock}
-              />
-            ))
-          )}
-        </div>
+
+            {/* 2. Major Indices */}
+            <div>
+              <h2 className="text-sm font-black text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-gradient-to-b from-accent to-accent2 rounded-full"></span>
+                ดัชนีตลาดและราคาสินทรัพย์ (Market Indices)
+              </h2>
+              
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                {indexData.length === 0 ? (
+                  [1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="bg-card/30 border border-border/30 rounded-3xl p-5 animate-pulse h-[110px]">
+                      <div className="w-16 h-3 bg-border/50 rounded mb-2"></div>
+                      <div className="w-24 h-5 bg-border/50 rounded mb-2"></div>
+                      <div className="w-12 h-3 bg-border/50 rounded"></div>
+                    </div>
+                  ))
+                ) : (
+                  indexData.map((idx: any) => {
+                    const changePct = idx.changePct;
+                    const isUp = idx.isUp;
+                    
+                    return (
+                      <div 
+                        key={idx.symbol}
+                        className="bg-card/40 border border-border/40 hover:border-accent/40 rounded-3xl p-5 hover:translate-y-[-2px] transition-all flex flex-col justify-between group backdrop-blur-sm"
+                      >
+                        <div>
+                          <div className="text-[0.65rem] font-bold text-muted uppercase tracking-wider mb-1 group-hover:text-white transition-colors">{idx.name}</div>
+                          <div className="text-lg font-black text-white tracking-tight">
+                            {idx.price != null ? idx.price.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '---'}
+                          </div>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className={`text-xs font-bold ${isUp ? 'text-green' : 'text-red'}`}>
+                            {changePct != null ? (isUp ? '+' : '') + (changePct * 100).toFixed(2) + '%' : '---'}
+                          </span>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isUp ? 'bg-green shadow-[0_0_8px_var(--green)]' : 'bg-red shadow-[0_0_8px_var(--red)]'}`}></span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* 3. Categories Shortcuts */}
+            <div>
+              <h2 className="text-sm font-black text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-gradient-to-b from-accent to-accent2 rounded-full"></span>
+                กลยุทธ์คัดกรองอัจฉริยะ (Smart Screener Tools)
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {[
+                  { id: 'expert_picks', icon: '🏆', title: 'Expert Picks', color: 'from-amber-500/20 to-orange-500/10', border: 'border-amber-500/30', desc: 'หุ้นคัดเกรดพรีเมียม วิเคราะห์รอบด้านด้วยเทคนิคและ AI' },
+                  { id: 'us_momentum', icon: '⚡', title: 'Momentum US', color: 'from-violet-500/20 to-purple-500/10', border: 'border-violet-500/30', desc: 'หุ้นสหรัฐที่มีแนวโน้มแรงเด่นชัด มีโอกาสปรับตัวขึ้นต่อสูง' },
+                  { id: 'day_gainers', icon: '🔥', title: 'Top Gainers', color: 'from-rose-500/20 to-red-500/10', border: 'border-rose-500/30', desc: 'หุ้นที่ทำเปอร์เซ็นต์บวกสูงสุดและมีกำลังซื้อโดดเด่นในรอบวัน' },
+                  { id: 'most_actives', icon: '📊', title: 'Most Active', color: 'from-blue-500/20 to-cyan-500/10', border: 'border-blue-500/30', desc: 'หุ้นที่มีปริมาณซื้อขาย (Volume) หนาแน่นที่สุดในตลาดวันนี้' },
+                  { id: 'undervalued_growth_stocks', icon: '💎', title: 'Undervalued', color: 'from-emerald-500/20 to-teal-500/10', border: 'border-emerald-500/30', desc: 'หุ้นดีราคาถูกที่พื้นฐานแข็งแกร่งและมีศักยภาพการเติบโตสูง' },
+                  { id: 'watchlist', icon: '⭐', title: 'Watchlist', color: 'from-yellow-500/20 to-amber-500/10', border: 'border-yellow-500/30', desc: 'ดูราคาและผลตอบแทนเฉลี่ยของหุ้นทั้งหมดในพอร์ตเฝ้าดูของคุณ' }
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      setActiveTab(cat.id);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`group text-left p-6 rounded-[2rem] border ${cat.border} bg-gradient-to-br ${cat.color} hover:translate-y-[-4px] active:scale-[0.98] transition-all duration-300 shadow-lg`}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <span className="text-4xl bg-black/20 p-2.5 rounded-2xl group-hover:scale-110 transition-transform duration-300">{cat.icon}</span>
+                      <span className="text-xs font-bold text-white bg-white/10 px-3 py-1 rounded-full group-hover:bg-white/20 transition-all">Explore ➔</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">{cat.title}</h3>
+                    <p className="text-xs text-muted leading-relaxed group-hover:text-text transition-colors">
+                      {cat.desc}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Portfolio Summary for Watchlist */}
+            {activeTab === 'watchlist' && data?.stocks && data.stocks.length > 0 && (
+              <PortfolioSummary stocks={data.stocks} />
+            )}
+
+            {/* LAYOUT: Dynamic Grid Feed */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
+              {loading && !data ? (
+                [1,2,3,4,5,6].map(i => (
+                  <SkeletonCard key={i} />
+                ))
+              ) : data?.stocks.length === 0 ? (
+                <div className="col-span-full text-center py-32 text-muted">
+                  <div className="text-5xl mb-6 opacity-50">🧭</div>
+                  <h3 className="text-2xl font-bold text-white mb-2">No signals found</h3>
+                  <p>Try switching categories or searching for a specific stock.</p>
+                </div>
+              ) : (
+                data?.stocks.map((stock: any, i: number) => (
+                  <StockCard 
+                    key={stock.symbol} 
+                    stock={stock} 
+                    rank={i + 1}
+                    isWatchlisted={watchlist.includes(stock.symbol)}
+                    onToggleWatchlist={toggleWatchlist}
+                    onClick={setSelectedStock}
+                  />
+                ))
+              )}
+            </div>
+          </>
+        )}
         </div>
       </main>
 

@@ -32,7 +32,7 @@ export default function MobileBottomNav({ activeTab, onSelect, onFocusSearch, on
       
       <button 
         className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${currentNav === 'overview' ? 'text-accent' : 'text-muted hover:text-white'}`}
-        onClick={() => handleSelect('us_momentum')}
+        onClick={() => handleSelect('dashboard')}
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
