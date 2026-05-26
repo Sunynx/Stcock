@@ -105,13 +105,30 @@ export default function StockDrawer({ stock, onClose }: any) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ symbol: data.symbol, fundamentals, headlines })
       });
-      const result = await res.json();
-      if (result.success) setAiResult(result);
-      else setAiError(result.error || 'Unknown error');
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        setAiError(errJson.error || 'Unknown error');
+        setAiLoading(false);
+        return;
+      }
+
+      setAiLoading(false);
+      setAiResult('');
+
+      const reader = res.body?.getReader();
+      if (!reader) return;
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        setAiResult((prev: any) => (prev || '') + chunk);
+      }
     } catch (e) {
       setAiError('ไม่สามารถเชื่อมต่อ AI ได้');
+      setAiLoading(false);
     }
-    setAiLoading(false);
   };
 
   const displayData = data || stock;
@@ -291,39 +308,17 @@ export default function StockDrawer({ stock, onClose }: any) {
                     </div>
                   )}
 
-                  {aiResult && (
+                  {aiResult !== null && (
                     <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4">
-                      
                       <div className="bg-gradient-to-br from-card to-bg p-6 rounded-3xl border border-accent/20 shadow-[0_10px_40px_rgba(124,92,252,0.1)]">
                         <h3 className="text-xs font-bold uppercase tracking-widest text-accent mb-3 flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
-                          Executive Summary
+                          Live Analysis
                         </h3>
                         <div className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap font-medium">
-                          {aiResult.aiAnalysis}
+                          {aiResult || <span className="animate-pulse">Analyzing...</span>}
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-1 gap-5">
-                        <div className="bg-card/50 p-5 rounded-3xl border border-white/5">
-                          <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">📰 News Synthesis</h3>
-                          <div className="text-sm text-white/80">{aiResult.aiNewsSummary}</div>
-                        </div>
-                        
-                        <div className={`p-5 rounded-3xl border flex items-start gap-4 ${
-                          aiResult.aiSentiment.label === 'bullish' ? 'bg-green-500/5 border-green-500/20' : 
-                          aiResult.aiSentiment.label === 'bearish' ? 'bg-red-500/5 border-red-500/20' : 
-                          'bg-yellow-500/5 border-yellow-500/20'
-                        }`}>
-                          <div className="text-4xl drop-shadow-xl">{aiResult.aiSentiment.emoji}</div>
-                          <div>
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Sentiment Verdict</h3>
-                            <div className="text-sm font-bold text-white mb-1 uppercase tracking-wider">{aiResult.aiSentiment.label}</div>
-                            <div className="text-sm opacity-80">{aiResult.aiSentiment.reason}</div>
-                          </div>
-                        </div>
-                      </div>
-
                     </div>
                   )}
                 </div>

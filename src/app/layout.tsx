@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "หุ้นซิ่ง P/E ต่ำ + ข่าวดี — จัดอันดับอัตโนมัติ",
 };
 
+import { StockProvider } from "@/lib/StockContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -36,7 +38,9 @@ export default function RootLayout({
             } catch(e) {}
           })()
         ` }} />
-        {children}
+        <StockProvider>
+          {children}
+        </StockProvider>
       </body>
     </html>
   );

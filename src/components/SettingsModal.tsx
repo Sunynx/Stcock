@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useStockContext } from '@/lib/StockContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -10,6 +11,11 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({ isOpen, onClose, onToggleTheme, isDarkMode }: SettingsModalProps) {
+  const { alerts, addAlert, removeAlert } = useStockContext();
+  const [newSymbol, setNewSymbol] = useState('');
+  const [newTarget, setNewTarget] = useState('');
+  const [newCondition, setNewCondition] = useState<'above' | 'below'>('above');
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -103,6 +109,74 @@ export default function SettingsModal({ isOpen, onClose, onToggleTheme, isDarkMo
               </div>
             </div>
             <div className="text-xs font-bold text-accent bg-accent/10 px-3 py-1 rounded-full">3 min</div>
+          </div>
+
+          {/* Price Alerts */}
+          <div className="p-4 bg-card/50 border border-border/30 rounded-2xl flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-500/20 rounded-xl text-yellow-400">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+              </div>
+              <div>
+                <div className="font-semibold text-text">แจ้งเตือนราคา (Price Alerts)</div>
+                <div className="text-xs text-muted">ตั้งค่าการแจ้งเตือนเมื่อราคาถึงเป้าหมาย</div>
+              </div>
+            </div>
+            
+            {alerts.length > 0 && (
+              <div className="space-y-2 mt-2">
+                {alerts.map((alert, i) => (
+                  <div key={i} className="flex justify-between items-center bg-bg p-2 rounded-lg border border-border/50">
+                    <span className="text-sm font-bold text-white">{alert.symbol}</span>
+                    <span className="text-sm text-muted">
+                      {alert.condition === 'above' ? '≥' : '≤'} ${alert.targetPrice}
+                    </span>
+                    <button onClick={() => removeAlert(i)} className="text-red-400 hover:text-red-300">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2 mt-2">
+              <input 
+                type="text" 
+                placeholder="Symbol (e.g. AAPL)" 
+                className="flex-1 min-w-0 bg-bg border border-border/50 rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-accent"
+                value={newSymbol}
+                onChange={e => setNewSymbol(e.target.value.toUpperCase())}
+              />
+              <select 
+                className="bg-bg border border-border/50 rounded-lg px-1 py-2 text-sm text-text focus:outline-none focus:border-accent"
+                value={newCondition}
+                onChange={e => setNewCondition(e.target.value as 'above'|'below')}
+              >
+                <option value="above">Above (≥)</option>
+                <option value="below">Below (≤)</option>
+              </select>
+              <input 
+                type="number" 
+                placeholder="Price" 
+                className="w-20 min-w-0 bg-bg border border-border/50 rounded-lg px-2 py-2 text-sm text-text focus:outline-none focus:border-accent"
+                value={newTarget}
+                onChange={e => setNewTarget(e.target.value)}
+              />
+            </div>
+            <button 
+              onClick={() => {
+                if (newSymbol && newTarget && !isNaN(Number(newTarget))) {
+                  addAlert({ symbol: newSymbol, targetPrice: Number(newTarget), condition: newCondition });
+                  setNewSymbol('');
+                  setNewTarget('');
+                }
+              }}
+              className="w-full py-2 bg-accent/10 text-accent font-bold rounded-lg hover:bg-accent/20 transition-colors text-sm"
+            >
+              + Add Alert
+            </button>
           </div>
         </div>
 
