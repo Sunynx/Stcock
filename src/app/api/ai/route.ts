@@ -5,12 +5,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { symbol, fundamentals, headlines } = body;
-
-    const apiKey = process.env.OPENROUTER_API_KEY || process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ success: false, error: 'API Key (OPENROUTER_API_KEY or GEMINI_API_KEY) is not configured in .env.local' }, { status: 500 });
-    }
+    const { symbol, fundamentals, headlines, provider = 'gemini' } = body;
 
     const prompt = `คุณคือ "ผู้ชี้ขาดการจัดการความเสี่ยงและผู้ดำเนินรายการโต๊ะกลม (Risk Management Judge and Debate Facilitator)" 
 หน้าที่ของคุณคือประเมินข้อโต้แย้งจำลองจากนักวิเคราะห์ 3 สาย (Risky Analyst, Neutral Analyst, Safe Analyst) ที่วิเคราะห์ข้อมูลของหุ้น ${symbol}
@@ -40,13 +35,33 @@ ${fundamentals}
 ข่าวล่าสุดและ Sentiment ของตลาด:
 ${headlines || 'ไม่มีข่าว'}`;
 
-    const isOpenRouter = apiKey.startsWith('sk-or-') || apiKey.includes('openrouter');
-    
+    let apiKey = '';
     let url = '';
     let headers: Record<string, string> = { 'Content-Type': 'application/json' };
     let payload: any = {};
+    let isStreamGenerateContent = false;
+    let isOpenAICompatible = false;
 
-    if (isOpenRouter) {
+    if (provider === 'groq') {
+      apiKey = process.env.GROQ_API_KEY || '';
+      if (!apiKey) return NextResponse.json({ success: false, error: 'GROQ_API_KEY is not configured in .env.local' }, { status: 500 });
+      url = 'https://api.groq.com/openai/v1/chat/completions';
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      };
+      payload = {
+        model: 'llama3-8b-8192', // Fast fallback, but let's use a standard model
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
+        max_tokens: 1000,
+        stream: true
+      };
+      payload.model = 'llama3-70b-8192'; // Better Groq model
+      isOpenAICompatible = true;
+    } else if (provider === 'openrouter') {
+      apiKey = process.env.OPENROUTER_API_KEY || '';
+      if (!apiKey) return NextResponse.json({ success: false, error: 'OPENROUTER_API_KEY is not configured in .env.local' }, { status: 500 });
       url = 'https://openrouter.ai/api/v1/chat/completions';
       headers = {
         'Content-Type': 'application/json',
@@ -61,12 +76,16 @@ ${headlines || 'ไม่มีข่าว'}`;
         max_tokens: 1000,
         stream: true
       };
+      isOpenAICompatible = true;
     } else {
+      apiKey = process.env.GEMINI_API_KEY || '';
+      if (!apiKey) return NextResponse.json({ success: false, error: 'GEMINI_API_KEY is not configured in .env.local' }, { status: 500 });
       url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
       payload = {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.4, maxOutputTokens: 800 }
       };
+      isStreamGenerateContent = true;
     }
 
     let res: Response | null = null;
@@ -136,7 +155,7 @@ ${headlines || 'ไม่มีข่าว'}`;
               try {
                 const data = JSON.parse(dataStr);
                 let textChunk = '';
-                if (isOpenRouter) {
+                if (isOpenAICompatible) {
                   textChunk = data?.choices?.[0]?.delta?.content || '';
                 } else {
                   textChunk = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';

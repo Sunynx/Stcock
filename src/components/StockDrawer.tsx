@@ -67,6 +67,7 @@ export default function StockDrawer({ stock, onClose }: any) {
   const [aiResult, setAiResult] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'chart' | 'ai' | 'news'>('overview');
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiProvider, setAiProvider] = useState<'gemini' | 'openrouter' | 'groq'>('gemini');
 
   // Slide-in animation state
   const [mounted, setMounted] = useState(false);
@@ -103,7 +104,7 @@ export default function StockDrawer({ stock, onClose }: any) {
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: data.symbol, fundamentals, headlines })
+        body: JSON.stringify({ symbol: data.symbol, fundamentals, headlines, provider: aiProvider })
       });
 
       if (!res.ok) {
@@ -272,8 +273,22 @@ export default function StockDrawer({ stock, onClose }: any) {
                       <div className="text-5xl mb-4 opacity-80">🤖</div>
                       <h3 className="text-lg font-bold text-white mb-2">StockSense Pro AI</h3>
                       <p className="text-sm text-muted max-w-sm mx-auto mb-6">
-                        Unlock deep insights using Gemini 2.0. We will analyze the technicals, fundamentals, and latest news simultaneously.
+                        Unlock deep insights using advanced AI models. We will analyze the technicals, fundamentals, and latest news simultaneously.
                       </p>
+                      
+                      <div className="flex flex-col items-center gap-2 mb-6">
+                        <label className="text-[0.65rem] font-bold uppercase tracking-widest text-muted">Select AI Provider</label>
+                        <select 
+                          value={aiProvider}
+                          onChange={(e) => setAiProvider(e.target.value as any)}
+                          className="bg-bg border border-white/10 rounded-xl px-4 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-accent w-56 text-center cursor-pointer hover:border-white/20 transition-all shadow-inner"
+                        >
+                          <option value="gemini">Google Gemini 2.0 Flash</option>
+                          <option value="groq">Groq (Llama 3 70B)</option>
+                          <option value="openrouter">GPT-4o Mini (OpenRouter)</option>
+                        </select>
+                      </div>
+
                       <button 
                         onClick={handleAiAnalyze} 
                         className="px-6 py-3 text-sm bg-white text-black rounded-full font-bold hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)]"
