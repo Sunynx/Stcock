@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #07070f;
+  --color-surface: #0f0f1e;
+  --color-card: #161628;
+  --color-border: #1e1e3a;
+  --color-text: #e2e2f0;
+  --color-muted: #7a7a9a;
+  --color-accent: #7c5cfc;
+  --color-accent2: #00e4a0;
+  --color-red: #ff4a6e;
+  --color-green: #00e4a0;
+  --color-yellow: #ffc947;
+  --color-blue: #5c8dfc;
+  
+  --font-sans: 'Inter', 'Sarabun', sans-serif;
+}
+
+@layer base {
+  :root {
+    --bg: #07070f;
+    --surface: #0f0f1e;
+    --card: #161628;
+    --border: #1e1e3a;
+    --text: #e2e2f0;
+    --muted: #7a7a9a;
+    --accent: #7c5cfc;
+    --accent2: #00e4a0;
+    --red: #ff4a6e;
+    --green: #00e4a0;
+    --yellow: #ffc947;
+    --blue: #5c8dfc;
+    --glass: rgba(22, 22, 40, 0.7);
+    --radius: 16px;
+  }
+
+  .light {
+    --bg: #f5f5fa;
+    --surface: #ffffff;
+    --card: #f0f0f8;
+    --border: #e0e0ee;
+    --text: #1a1a2e;
+    --muted: #6b6b8a;
+    --accent: #6b4ce6;
+    --accent2: #00c98d;
+    --red: #e5395a;
+    --green: #00c98d;
+    --yellow: #e6a800;
+    --blue: #4a7af5;
+    --glass: rgba(255, 255, 255, 0.8);
+  }
+  
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', 'Sarabun', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  
+  .shimmer-bg {
+    background: linear-gradient(90deg, var(--card) 25%, var(--border) 50%, var(--card) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  @keyframes cardEntrance {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .card-entrance {
+    opacity: 0;
+    animation: cardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  
+  /* Ticker marquee */
+  @keyframes ticker-scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  
+  .ticker-scroll {
+    animation: ticker-scroll 30s linear infinite;
+  }
+  
+  .ticker-scroll:hover {
+    animation-play-state: paused;
+  }
+  
+  /* Price flash animation */
+  @keyframes priceFlash {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: rgba(0, 228, 160, 0.15); }
+  }
+  
+  .price-flash {
+    animation: priceFlash 0.6s ease-out;
+  }
+  
+  /* RSI Gauge animation */
+  @keyframes gaugeNeedle {
+    from { transform: rotate(-90deg); }
+  }
+  
+  .gauge-animate {
+    animation: gaugeNeedle 1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  /* Number counter animation */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .fade-in-up {
+    animation: fadeInUp 0.4s ease-out both;
+  }
+
+  /* Settings slide up */
+  .settings-slide-up {
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+}
