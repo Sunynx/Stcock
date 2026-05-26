@@ -12,14 +12,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'GEMINI_API_KEY is not configured in .env' }, { status: 500 });
     }
 
-    const prompt = `คุณเป็นนักวิเคราะห์หุ้นมืออาชีพ วิเคราะห์หุ้น ${symbol} จากข้อมูลด้านล่าง ตอบเป็นรูปแบบ Markdown ให้อ่านง่าย สวยงาม มีหัวข้อดังนี้:
-1. สรุปภาพรวม (Executive Summary) - วิเคราะห์สั้นๆ รวมจุดแข็ง จุดอ่อน และคำแนะนำ (ซื้อ/ถือ/รอ)
-2. สรุปข่าวล่าสุด - บอกผลกระทบต่อราคา
-3. Sentiment - บอกว่า Bullish, Bearish, หรือ Neutral พร้อมเหตุผลสั้นๆ
+    const prompt = `คุณคือ "ผู้ชี้ขาดการจัดการความเสี่ยงและผู้ดำเนินรายการโต๊ะกลม (Risk Management Judge and Debate Facilitator)" 
+หน้าที่ของคุณคือประเมินข้อโต้แย้งจำลองจากนักวิเคราะห์ 3 สาย (Risky Analyst, Neutral Analyst, Safe Analyst) ที่วิเคราะห์ข้อมูลของหุ้น ${symbol}
+จากนั้นให้คุณตัดสินใจและออกคำแนะนำแบบเฉียบขาด โดยตอบเป็นรูปแบบ Markdown ให้อ่านง่าย สวยงาม เป็น "ภาษาไทย" (เว้นแต่หัวข้อหลักให้ใช้ภาษาอังกฤษตามที่กำหนด) และต้องมีโครงสร้าง 4 ส่วนนี้เท่านั้น:
 
-ข้อมูลพื้นฐาน: ${fundamentals}
+### 1. Summary of Key Arguments
+- **Risky Analyst:** สรุปมุมมองเชิงบวก โอกาสเติบโต และปัจจัยกระตุ้นราคา (Catalyst) ที่น่าสนใจที่สุด
+- **Safe Analyst:** ยกคำเตือนเรื่องความเสี่ยง ความผันผวน (เช่น ATR กว้าง) หรือสัญญาณเตือนทางเทคนิค/มหภาค
+- **Neutral Analyst:** สรุปมุมมองกลางๆ สภาพตลาดแบบ Range-bound หรือจุดเปลี่ยนสำคัญที่ต้องจับตา
 
-ข่าวล่าสุด (พร้อม Sentiment Score >0=Bullish, <0=Bearish):
+### 2. Rationale for the Decision
+อธิบายเหตุผลในการตัดสินใจแบบลึกซึ้ง ว่าทำไมน้ำหนักถึงเอียงไปทางฝั่งใดฝั่งหนึ่ง และความเสี่ยงใดที่ต้องระวังเป็นพิเศษ
+
+### 3. Learnings from Past Mistakes
+ให้คุณจำลองบทเรียนจากความผิดพลาดในอดีต (เช่น การเข้าซื้อตอนผันผวนสูง หรือ การรีบขายหมูเกินไป) และนำมาปรับใช้ในการเข้าซื้อหุ้น ${symbol} รอบนี้
+
+### 4. Refined Strategic Plan (The Decision)
+- **Recommendation:** [BUY / HOLD / SELL]
+- **Initial Entry:** แผนการเข้าซื้อไม้แรก (ระบุระดับราคา หรือ สัดส่วนความเสี่ยง)
+- **Secondary Entry:** [ถ้ามี] แผนการซื้อไม้ที่สอง หากเงื่อนไขบางอย่างเป็นจริง
+- **Risk Management (Stop-Loss):** จุดตัดขาดทุน หรือจุดหนีตายเมื่อผิดทาง
+- **Monitoring:** ปัจจัยหรือตัวเลขทางเศรษฐกิจ/ธุรกิจที่ต้องจับตาดูอย่างใกล้ชิด
+
+ข้อมูลพื้นฐานของหุ้น: 
+${fundamentals}
+
+ข่าวล่าสุดและ Sentiment ของตลาด:
 ${headlines || 'ไม่มีข่าว'}`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
