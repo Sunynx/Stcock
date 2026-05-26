@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
 ข้อมูลพื้นฐาน: ${fundamentals}
 
-ข่าวล่าสุด:
+ข่าวล่าสุด (พร้อม Sentiment Score >0=Bullish, <0=Bearish):
 ${headlines || 'ไม่มีข่าว'}`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;

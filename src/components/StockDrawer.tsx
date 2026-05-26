@@ -98,7 +98,7 @@ export default function StockDrawer({ stock, onClose }: any) {
     setAiError(null);
     try {
       const fundamentals = `ราคา: ${data.price}, P/E: ${data.pe}, RSI: ${data.rsi}, MACD: ${data.macdHist}, 5D: ${data.d5}`;
-      const headlines = data.news?.map((n: any) => n.title).join('\n') || '';
+      const headlines = data.news?.map((n: any) => `${n.title}\n  Summary: ${n.snippet || ''}\n  Sentiment Score: ${n.sentimentScore !== undefined ? n.sentimentScore : 'N/A'}`).join('\n\n') || '';
       
       const res = await fetch('/api/ai', {
         method: 'POST',

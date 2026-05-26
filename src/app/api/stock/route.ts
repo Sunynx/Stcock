@@ -20,11 +20,16 @@ export async function GET(request: Request) {
 
   try {
     const data = await stockCache.getOrUpdate(symbol, async () => {
-      const [news, periods, bizInfo] = await Promise.all([
-        fetchStockNews(symbol),
+      // 1. Fetch periods & try Alpha Vantage first
+      const [periods, avNews, avOverview] = await Promise.all([
         fetchMultiPeriodChange_(symbol),
-        fetchBizInfo_(symbol)
+        import('@/lib/alphaVantage').then(m => m.fetchAlphaVantageNews(symbol)).catch(() => null),
+        import('@/lib/alphaVantage').then(m => m.fetchAlphaVantageOverview(symbol)).catch(() => null)
       ]);
+      
+      // 2. Fallback to Yahoo if Alpha Vantage returns null (e.g. rate limit hit)
+      const news = avNews || await fetchStockNews(symbol);
+      const bizInfo = avOverview || await fetchBizInfo_(symbol);
       
       const sentiment = analyzeNewsSentiment_(news);
       
