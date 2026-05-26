@@ -57,7 +57,7 @@ ${headlines || 'ไม่มีข่าว'}`;
         max_tokens: 1000,
         stream: true
       };
-      payload.model = 'llama3-70b-8192'; // Better Groq model
+      payload.model = 'llama-3.3-70b-versatile'; // Better Groq model
       isOpenAICompatible = true;
     } else if (provider === 'openrouter') {
       apiKey = process.env.OPENROUTER_API_KEY || '';
