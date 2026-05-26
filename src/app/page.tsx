@@ -17,6 +17,8 @@ import { CompareDrawer } from '@/components/CompareDrawer';
 export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [indexData, setIndexData] = useState<any[]>([]);
+  const [trendingStocks, setTrendingStocks] = useState<any[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +90,7 @@ export default function Home() {
     setLoading(false);
   }, []);
 
-  // Fetch Dashboard Index Data
+  // Fetch Dashboard Index & Trending Data
   useEffect(() => {
     if (activeTab === 'dashboard') {
       const symbols = ['SPY', 'QQQ', 'DIA', 'BTC-USD', 'GC=F'];
@@ -105,7 +107,7 @@ export default function Home() {
           const results = await Promise.all(
             symbols.map(async (sym) => {
               try {
-                const res = await fetch(`/api/stock?symbol=${sym}`);
+                const res = await fetch(`/api/stock?symbol=${sym}&noav=true`);
                 const data = await res.json();
                 if (data.success && data.data) {
                   return {
@@ -128,7 +130,23 @@ export default function Home() {
           console.error('Error fetching dashboard indices:', e);
         }
       };
+
+      const fetchTrending = async () => {
+        setTrendingLoading(true);
+        try {
+          const res = await fetch('/api/screener?category=day_gainers');
+          const data = await res.json();
+          if (data.success && data.stocks) {
+            setTrendingStocks(data.stocks.slice(0, 3));
+          }
+        } catch (e) {
+          console.error('Error fetching trending stocks:', e);
+        }
+        setTrendingLoading(false);
+      };
+      
       fetchIndices();
+      fetchTrending();
     }
   }, [activeTab]);
 
@@ -373,6 +391,77 @@ export default function Home() {
                             {changePct != null ? (isUp ? '+' : '') + (changePct * 100).toFixed(2) + '%' : '---'}
                           </span>
                           <span className={`w-1.5 h-1.5 rounded-full ${isUp ? 'bg-green shadow-[0_0_8px_var(--green)]' : 'bg-red shadow-[0_0_8px_var(--red)]'}`}></span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Yahoo Day Gainers Section */}
+            <div>
+              <h2 className="text-sm font-black text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-gradient-to-b from-accent to-accent2 rounded-full"></span>
+                🔥 หุ้นเด่นขึ้นแรงประจำวัน (Daily Top Gainers - Yahoo Finance)
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {trendingLoading ? (
+                  [1, 2, 3].map(i => (
+                    <div key={i} className="bg-card/30 border border-border/30 rounded-[2rem] p-5 animate-pulse h-[140px] flex flex-col justify-between">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="w-16 h-4 bg-border/50 rounded mb-2"></div>
+                          <div className="w-28 h-3 bg-border/50 rounded"></div>
+                        </div>
+                        <div className="w-5 h-5 bg-border/50 rounded-full"></div>
+                      </div>
+                      <div className="w-20 h-6 bg-border/50 rounded mt-4"></div>
+                    </div>
+                  ))
+                ) : trendingStocks.length === 0 ? (
+                  <div className="col-span-full text-center py-6 text-muted bg-card/20 rounded-3xl border border-border/20">
+                    ไม่พบข้อมูลผู้ขึ้นสูงสุดชั่วคราว
+                  </div>
+                ) : (
+                  trendingStocks.map((stock: any, i: number) => {
+                    const isUp = (stock.changePct ?? 0) >= 0;
+                    return (
+                      <div
+                        key={stock.symbol}
+                        onClick={() => setSelectedStock(stock)}
+                        className="cursor-pointer bg-gradient-to-br from-card/60 to-bg border border-border/40 hover:border-accent/40 rounded-[2rem] p-5 flex flex-col justify-between hover:translate-y-[-2px] transition-all duration-300 group backdrop-blur-sm relative"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-black text-white group-hover:text-accent transition-colors">{stock.symbol}</span>
+                              <span className="text-[10px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">{i + 1}</span>
+                            </div>
+                            <div className="text-[10px] text-muted truncate max-w-[150px]">{stock.shortName || stock.longName}</div>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleWatchlist(stock.symbol);
+                            }}
+                            className="p-1.5 bg-card/85 border border-white/5 rounded-full text-muted hover:text-yellow-400 hover:bg-white/5 active:scale-90 transition-all shrink-0"
+                          >
+                            <span className="text-xs">{watchlist.includes(stock.symbol) ? '★' : '☆'}</span>
+                          </button>
+                        </div>
+                        
+                        <div className="flex justify-between items-end mt-4">
+                          <div>
+                            <div className="text-lg font-black text-white">
+                              ${stock.price != null ? stock.price.toFixed(2) : '---'}
+                            </div>
+                            <div className={`text-[10px] font-bold ${isUp ? 'text-green' : 'text-red'}`}>
+                              {stock.changePct != null ? (isUp ? '+' : '') + (stock.changePct * 100).toFixed(2) + '%' : '---'}
+                            </div>
+                          </div>
+                          <span className="text-xs text-muted group-hover:text-accent transition-colors font-medium">ดูข้อมูล ➔</span>
                         </div>
                       </div>
                     );
