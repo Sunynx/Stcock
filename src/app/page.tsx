@@ -19,6 +19,8 @@ export default function Home() {
   const [indexData, setIndexData] = useState<any[]>([]);
   const [trendingStocks, setTrendingStocks] = useState<any[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(true);
+  const [generalNews, setGeneralNews] = useState<any[]>([]);
+  const [generalNewsLoading, setGeneralNewsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +92,7 @@ export default function Home() {
     setLoading(false);
   }, []);
 
-  // Fetch Dashboard Index & Trending Data
+  // Fetch Dashboard Index, Trending & News Data
   useEffect(() => {
     if (activeTab === 'dashboard') {
       const symbols = ['SPY', 'QQQ', 'DIA', 'BTC-USD', 'GC=F'];
@@ -144,9 +146,24 @@ export default function Home() {
         }
         setTrendingLoading(false);
       };
+
+      const fetchGeneralNews = async () => {
+        setGeneralNewsLoading(true);
+        try {
+          const res = await fetch('/api/news');
+          const data = await res.json();
+          if (data.success && data.news) {
+            setGeneralNews(data.news);
+          }
+        } catch (e) {
+          console.error('Error fetching general news:', e);
+        }
+        setGeneralNewsLoading(false);
+      };
       
       fetchIndices();
       fetchTrending();
+      fetchGeneralNews();
     }
   }, [activeTab]);
 
@@ -242,6 +259,18 @@ export default function Home() {
       return newMode;
     });
   }, []);
+
+  const formatTimeAgo = (timestamp: number): string => {
+    const diff = Date.now() - timestamp;
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(mins / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (mins < 1) return 'เมื่อครู่';
+    if (mins < 60) return `${mins} นาทีที่แล้ว`;
+    if (hours < 24) return `${hours} ชั่วโมงที่แล้ว`;
+    return `${days} วันที่แล้ว`;
+  };
 
   return (
     <div className="min-h-screen bg-bg text-text font-sans flex flex-col overflow-x-hidden w-full">
@@ -504,6 +533,68 @@ export default function Home() {
                     </p>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* 4. General Market News */}
+            <div className="border-t border-border/40 pt-8">
+              <h2 className="text-sm font-black text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-gradient-to-b from-accent to-accent2 rounded-full"></span>
+                📰 ข่าวสารการเงินและการลงทุนล่าสุด (Latest Market News)
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {generalNewsLoading ? (
+                  [1, 2, 3, 4].map(i => (
+                    <div key={i} className="bg-card/20 border border-border/20 rounded-3xl p-5 animate-pulse flex flex-col gap-3">
+                      <div className="flex gap-2">
+                        <div className="w-20 h-4 bg-border/40 rounded"></div>
+                        <div className="w-12 h-4 bg-border/40 rounded"></div>
+                      </div>
+                      <div className="w-full h-5 bg-border/40 rounded"></div>
+                      <div className="w-3/4 h-3 bg-border/40 rounded"></div>
+                    </div>
+                  ))
+                ) : generalNews.length === 0 ? (
+                  <div className="col-span-full text-center py-10 text-muted bg-card/25 rounded-3xl border border-border/20">
+                    ไม่พบข้อมูลข่าวสารตลาดเงินในขณะนี้
+                  </div>
+                ) : (
+                  generalNews.map((item: any, idx: number) => {
+                    const timeAgo = formatTimeAgo(item.pubDate);
+                    return (
+                      <a 
+                        key={idx}
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group bg-card/30 border border-border/30 hover:border-accent/40 hover:bg-card/50 rounded-3xl p-5 hover:translate-y-[-2px] transition-all flex flex-col justify-between backdrop-blur-sm"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              item.source === 'TradingView' 
+                                ? 'bg-blue/15 text-blue border border-blue/20' 
+                                : 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
+                            }`}>
+                              {item.source}
+                            </span>
+                            <span className="text-[10px] text-muted font-medium">{timeAgo}</span>
+                          </div>
+                          <h3 className="text-sm font-bold text-white group-hover:text-accent transition-colors line-clamp-2 leading-snug">
+                            {item.title}
+                          </h3>
+                          <p className="text-xs text-muted line-clamp-2 leading-relaxed">
+                            {item.description}
+                          </p>
+                        </div>
+                        <div className="mt-4 flex items-center justify-end text-[10px] font-bold text-muted group-hover:text-accent transition-colors">
+                          อ่านข่าวเต็ม ➔
+                        </div>
+                      </a>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
