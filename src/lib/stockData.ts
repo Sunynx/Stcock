@@ -259,6 +259,10 @@ export async function fetchMultiPeriodChange_(symbol: string) {
     const price  = res.meta?.regularMarketPrice;
     if (!price || !closes.length) return result;
 
+    result.price = price;
+    const prevPrice = res.meta?.chartPreviousClose ?? res.meta?.previousClose ?? price;
+    result.change = price - prevPrice;
+
     const valid = closes.filter((c: number | null) => c != null);
     const len = valid.length;
     if (len < 2) return result;
