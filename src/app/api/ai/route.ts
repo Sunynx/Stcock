@@ -46,18 +46,44 @@ ${headlines || 'ไม่มีข่าว'}`;
       generationConfig: { temperature: 0.4, maxOutputTokens: 800 }
     };
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    let res: Response | null = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      if (res.status === 429) {
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.status === 429) {
+          if (attempts < maxAttempts) {
+            const waitTime = 2000 * attempts;
+            console.warn(`[Gemini API] Rate Limit (429) hit. Retrying in ${waitTime}ms... (Attempt ${attempts}/${maxAttempts})`);
+            await delay(waitTime);
+            continue;
+          }
+        }
+        break; // If success or non-429 error, break loop
+      } catch (err) {
+        if (attempts >= maxAttempts) {
+          throw err;
+        }
+        await delay(1000 * attempts);
+      }
+    }
+
+    if (!res || !res.ok) {
+      const status = res ? res.status : 500;
+      const errorText = res ? await res.text() : 'No response from API';
+      if (status === 429) {
         return NextResponse.json({ success: false, error: 'ระบบ AI มีผู้ใช้งานเยอะเกินไป (Error 429 Rate Limit) กรุณารอสักครู่แล้วกดวิเคราะห์ใหม่ครับ ⏳' }, { status: 429 });
       }
-      return NextResponse.json({ success: false, error: `AI Error: ${res.status} - ${errorText}` }, { status: 502 });
+      return NextResponse.json({ success: false, error: `AI Error: ${status} - ${errorText}` }, { status: 502 });
     }
 
     const stream = new ReadableStream({
