@@ -7,9 +7,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { symbol, fundamentals, headlines } = body;
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.OPENROUTER_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ success: false, error: 'GEMINI_API_KEY is not configured in .env' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'API Key (OPENROUTER_API_KEY or GEMINI_API_KEY) is not configured in .env.local' }, { status: 500 });
     }
 
     const prompt = `คุณคือ "ผู้ชี้ขาดการจัดการความเสี่ยงและผู้ดำเนินรายการโต๊ะกลม (Risk Management Judge and Debate Facilitator)" 
@@ -40,11 +40,34 @@ ${fundamentals}
 ข่าวล่าสุดและ Sentiment ของตลาด:
 ${headlines || 'ไม่มีข่าว'}`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
-    const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.4, maxOutputTokens: 800 }
-    };
+    const isOpenRouter = apiKey.startsWith('sk-or-') || apiKey.includes('openrouter');
+    
+    let url = '';
+    let headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    let payload: any = {};
+
+    if (isOpenRouter) {
+      url = 'https://openrouter.ai/api/v1/chat/completions';
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'http://localhost:3000',
+        'X-Title': 'StockSense Pro'
+      };
+      payload = {
+        model: 'openai/gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
+        max_tokens: 1000,
+        stream: true
+      };
+    } else {
+      url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+      payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 800 }
+      };
+    }
 
     let res: Response | null = null;
     let attempts = 0;
@@ -56,14 +79,14 @@ ${headlines || 'ไม่มีข่าว'}`;
       try {
         res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(payload)
         });
 
         if (res.status === 429) {
           if (attempts < maxAttempts) {
             const waitTime = 2000 * attempts;
-            console.warn(`[Gemini API] Rate Limit (429) hit. Retrying in ${waitTime}ms... (Attempt ${attempts}/${maxAttempts})`);
+            console.warn(`[AI API] Rate Limit (429) hit. Retrying in ${waitTime}ms... (Attempt ${attempts}/${maxAttempts})`);
             await delay(waitTime);
             continue;
           }
@@ -106,12 +129,19 @@ ${headlines || 'ไม่มีข่าว'}`;
           buffer = lines.pop() || '';
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const dataStr = line.slice(6);
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const dataStr = trimmed.slice(6);
               if (dataStr.trim() === '[DONE]') continue;
               try {
                 const data = JSON.parse(dataStr);
-                const textChunk = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                let textChunk = '';
+                if (isOpenRouter) {
+                  textChunk = data?.choices?.[0]?.delta?.content || '';
+                } else {
+                  textChunk = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                }
+                
                 if (textChunk) {
                   controller.enqueue(new TextEncoder().encode(textChunk));
                 }
